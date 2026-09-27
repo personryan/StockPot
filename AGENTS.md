@@ -11,11 +11,11 @@ Before making changes:
    - Recipe importing → `/docs/services/recipe.md`
    - Ingredient matching → `/docs/services/matching.md`
    - Shopping list → `/docs/services/shopping.md`
-   - Auth → `/docs/services/autht.md`
+   - Auth → `/docs/services/auth.md`
 4. Follow the appropriate workflow:
    - Development → `/docs/workflows/developer.md`
    - Testing → `/docs/workflows/tester.md`
-   - Database changes → `/docs/database.md`
+   - Database changes → `/docs/workflows/database.md` and `/docs/database.md`
 
 Do not change behaviour documented in these files without updating the
 corresponding documentation.

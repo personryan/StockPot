@@ -205,6 +205,28 @@ The same behaviour should be consistent across services.
 
 # Service-Specific Testing
 
+## Authentication
+
+Phase 1 automated tests must cover:
+
+- email/password login and safe failure messages
+- registration with and without email confirmation
+- PKCE confirmation-code handling
+- session restoration before route guards decide
+- refreshed access tokens and cross-tab sign-out events
+- logout success and retryable failure
+- token attachment only to the configured Go API origin and path
+- missing, malformed, duplicate, and rejected bearer credentials
+- verified identity overriding any spoofed user ID input
+- Auth outages, cancellation, and redirects failing closed
+- public health and CORS preflight remaining available
+
+Mock Supabase Auth in automated tests; do not create real users or send email.
+For manual verification, use a Supabase development project with the Data API
+disabled and follow the Auth setup in `/README.md`. Verify registration,
+confirmation, login, reloading a protected page, and logout. This phase does not
+require an application database migration.
+
 ## Fridge Service
 
 Test:

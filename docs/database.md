@@ -4,8 +4,8 @@
 
 This is the **proposed schema**, based on the [Fridge](services/fridge.md),
 [Recipe](services/recipe.md), [Matching](services/matching.md), and
-[Shopping](services/shopping.md) requirements. The repository currently has no
-application implementation or migrations. These constraints and access rules
+[Shopping](services/shopping.md) requirements. The development scaffold and migration
+runner exist, but no business tables or SQL migrations are implemented. These constraints and access rules
 are design requirements, not deployed guarantees.
 
 Supabase `auth.users` supplies identities. All application tables belong to
@@ -292,5 +292,5 @@ foreign keys. The provenance primary key supports lookup by shopping item.
 - **Import infrastructure:** no raw-page archive, shared scrape cache, or import-job
   table is included. Successful imports use the recipe tables above.
 
-Future schema implementation requires migrations and database tests. This
-update creates neither and changes no application APIs.
+Future schema implementation requires migrations and database tests. Follow the
+[database workflow](workflows/database.md); the API never applies migrations on startup.
