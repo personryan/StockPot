@@ -6,6 +6,91 @@ The Auth Service handles user authentication and access to protected application
 
 Authentication is provided using Supabase Auth.
 
+## Phase 1 implementation
+
+Angular uses the Supabase Auth SDK for email/password registration, login, session
+restoration, automatic token refresh, and logout. Only the SDK's Auth client is
+exposed to application code. The Supabase Data API remains disabled; application
+database operations must go through the Go backend.
+
+Routes:
+
+- `/login` and `/register`: public email/password forms.
+- `/auth/callback`: public PKCE email-confirmation callback.
+- `/account`: protected account page that checks the session with Go and allows logout.
+- `/`: public application shell and process-health check.
+
+The auth guard waits for session restoration before redirecting unauthenticated
+users to `/login`. Signals track session changes, including refresh and sign-out
+events from other tabs. The account page returns to login when the session clears.
+Browser state controls the UI only; Go independently verifies every protected request.
+
+The HTTP interceptor reads the current SDK session token and sets a Bearer header
+only for URLs matching the configured Go API origin and path boundary. It does
+not send tokens to Supabase through Angular HTTP, unrelated hosts, or similar path
+prefixes. Supabase's Auth SDK manages its own requests. No caller-supplied user ID
+or manually supplied Authorization header is used to establish the API identity.
+
+### Server validation and endpoint
+
+Go verifies each bearer token by calling the configured project's
+`GET /auth/v1/user` with the token and `SUPABASE_PUBLISHABLE_KEY`. Supabase Auth
+validates the token; Go uses the returned user ID, never an unverified JWT payload.
+This is the REST equivalent of [Supabase getUser](https://supabase.com/docs/reference/javascript/auth-getuser).
+It works independently of the Data API and does not require a JWT secret or
+privileged Supabase key. The backend accepts the `sb_publishable_` key format.
+
+Verification has a five-second timeout, does not follow redirects, and is not
+cached. This adds an Auth network request per protected API request. A future
+local JWT/JWKS verifier can replace it behind the verifier interface if needed.
+No tokens, passwords, provider error bodies, or credentials are logged.
+
+`GET /api/auth/me` takes no identity parameters and returns:
+
+```json
+{
+  "id": "1c467b92-e7df-46c3-93cc-412c8bd5d900",
+  "email": "user@example.com"
+}
+```
+
+The ID is required; email is omitted if unavailable. The response is not cached.
+
+- `200`: verified user identity.
+- `401`, `{"error":"UNAUTHORISED"}`: missing/malformed bearer credentials or
+  credentials rejected by Supabase. Includes `WWW-Authenticate: Bearer`.
+- `503`, `{"error":"AUTH_UNAVAILABLE"}`: Auth timeout, outage, rate limit, or
+  unusable upstream response. Access is denied and internal details are omitted.
+
+The middleware places the verified user in typed request context; future services
+must obtain identity through `auth.UserFromContext`. Query/body `user_id` and
+`X-User-ID` headers are never accepted as proof of identity. CORS preflight and
+`GET /api/health` remain public.
+
+### Confirmation and logout
+
+Registration uses a minimum of eight characters in the UI; Supabase enforces the
+project's password policy. With email confirmation enabled, registration shows a
+neutral “check your email” message and does not enter protected routes. Existing
+accounts may receive the same message to avoid account enumeration. When Supabase
+returns an immediate session, the user proceeds to `/account`.
+
+Add `http://localhost:4200/auth/callback` to Supabase Auth's allowed redirect URLs,
+and set the local Site URL to `http://localhost:4200`. Configure the corresponding
+HTTPS URLs for deployed environments. The callback exchanges a PKCE code and
+removes query parameters from the visible URL. Complete confirmation in the same
+browser used to register; if code exchange cannot complete but email is confirmed,
+sign in using the email/password form. Provider errors are shown as safe messages.
+
+Logout uses the SDK's `local` scope: it signs out this browser session, clears SDK
+session storage on success, and redirects to login. If the request fails, show a
+retryable error instead of claiming logout succeeded. Already issued access tokens
+can remain valid until expiry; logout is not a guarantee of immediate JWT revocation.
+
+This phase creates no application profile or database tables and makes no Data API
+calls. Pantry setup, Fridge Service, password reset, and other domain features are
+future work.
+
 The application is responsible for:
 
 - registration flow
@@ -42,8 +127,9 @@ Behaviour:
 1. Send registration request to Supabase Auth.
 2. Supabase creates the authentication user.
 3. Application receives the authenticated user's ID.
-4. Application creates any required application-level user profile.
-5. User proceeds to initial pantry setup.
+4. If confirmation is required, show the confirmation message without signing in.
+5. Once a session exists, proceed to the protected account page. Application
+   profiles and pantry setup are deferred beyond Phase 1.
 
 Possible result:
 

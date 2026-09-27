@@ -32,6 +32,17 @@ Missing ingredients can be added to a shopping list.
 
 ## Architecture
 
+### Implemented foundation
+
+The repository currently contains an Angular shell with a connection check and a
+Go API exposing `GET /api/health`. This endpoint reports process health only.
+Email/password authentication is implemented with Supabase Auth and a protected
+Go `/api/auth/me` endpoint. The core domain flows below remain future work.
+The Supabase Data API is disabled; all application database access goes through Go.
+No business tables have been created. Database migrations are explicit commands;
+see [the database workflow](workflows/database.md). Startup and verification
+commands are in [README.md](../README.md).
+
 ### Frontend
 
 - Angular
@@ -109,7 +120,7 @@ See:
 Tracks ingredients a user needs to purchase.
 
 See:
-`/docs/services/shopping-list.md`
+`/docs/services/shopping.md`
 
 ### Auth
 Handles user authentication and access to protected application features.
